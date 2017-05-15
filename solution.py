@@ -1,14 +1,13 @@
-assignments = []
-
-rows = 'ABCDEFGHI'
-cols = '123456789'
 
 def cross(A, B):
     "Cross product of elements in A and elements in B."
     return [s + t for s in A for t in B]
 
+# global variables that we will use in the functions
+assignments = []
+rows = 'ABCDEFGHI'
+cols = '123456789'
 boxes = cross(rows, cols)
-
 row_units = [cross(r, cols) for r in rows]
 column_units = [cross(rows, c) for c in cols]
 square_units = [cross(rs, cs) for rs in ('ABC','DEF','GHI') for cs in ('123','456','789')]
@@ -35,6 +34,7 @@ def assign_value(values, box, value):
         assignments.append(values.copy())
     return values
 
+
 def naked_twins(values):
     """Eliminate values using the naked twins strategy.
     Args:
@@ -46,18 +46,26 @@ def naked_twins(values):
 
     # Find all instances of naked twins
     # Eliminate the naked twins as possibilities for their peers
+
+    # go over each unit at a time
     for unit in unitlist:
-        # list of boxes in unit which have length of two
-        from collections import Counter
-        #test = [values[box] for box in unit if len(values[box]) == 2]
-        possible_twin_values= dict(Counter([values[box] for box in unit if len(values[box])==2]))
-        sure_twin_values = [k for k,v in possible_twin_values.items() if v == 2]
-        for value in sure_twin_values:
-            for box in unit:
-                if values[box] != value:
-                    for digit in value:
-                        values = assign_value(values, box, values[box].replace(digit, ''))
+        # prepare a dictionary of form {'35' : ['B1', 'C1', ....}
+        from collections import defaultdict
+        cnt = defaultdict(list)
+        for box in unit:
+            cnt[values[box]].append(box)
+        # go over all the items in above dictionary
+        for k,v in cnt.items():
+            #check if there is a naked twin situation
+            if len(k) == 2 and len(v) == 2:
+                #remove all the digits in naked twins from all other boxes in the unit
+                for digit in k:
+                    for box in unit:
+                        if box not in v:
+                            assign_value(values, box, values[box].replace(digit, ''))
     return values
+
+
 
 def grid_values(grid):
     """
@@ -69,13 +77,15 @@ def grid_values(grid):
             Keys: The boxes, e.g., 'A1'
             Values: The value in each box, e.g., '8'. If the box has no value, then the value will be '123456789'.
     """
-    values = {}
-    for i, n in enumerate(grid):
-        if n == ".":
-            values[boxes[i]] = '123456789'
-        elif n in '123456789':
-            values[boxes[i]] = n
-    return values
+    chars = []
+    digits = '123456789'
+    for c in grid:
+        if c in digits:
+            chars.append(c)
+        if c == '.':
+            chars.append(digits)
+    assert len(chars) == 81
+    return dict(zip(boxes, chars))
 
 
 
@@ -94,22 +104,40 @@ def display(values):
     print
 
 def eliminate(values):
-    solved_values = [box for box in boxes if len(values[box])==1]
+    """
+    Go through all the boxes, and whenever there is a box with a value, eliminate this value from the values of all its peers.
+    Input: A sudoku in dictionary form.
+    Output: The resulting sudoku in dictionary form.
+    """
+    solved_values = [box for box in values.keys() if len(values[box])==1]
     for box in solved_values:
         digit = values[box]
         for peer in peers[box]:
-            values = assign_value(values, peer, values[peer].replace(digit, ''))
+            assign_value(values, peer, values[peer].replace(digit, ''))
     return values
 
 def only_choice(values):
+    """
+    Go through all the units, and whenever there is a unit with a value that only fits in one box, assign the value to this box.
+    Input: A sudoku in dictionary form.
+    Output: The resulting sudoku in dictionary form.
+    """
     for unit in unitlist:
         for digit in '123456789':
-            dplaces = [box for box in boxes if digit in values[box]]
+            dplaces = [box for box in unit if digit in values[box]]
             if len(dplaces) == 1:
-                values = assign_value(values, dplaces[0], digit)
+                assign_value(values, dplaces[0], digit)
     return values
 
 def reduce_puzzle(values):
+    """
+    Iterate eliminate() and only_choice(). If at some point, there is a box with no available values, return False.
+    If the sudoku is solved, return the sudoku.
+    If after an iteration of both functions, the sudoku remains the same, return the sudoku.
+    Input: A sudoku in dictionary form.
+    Output: The resulting sudoku in dictionary form.
+    """
+    solved_values = [box for box in values.keys() if len(values[box]) == 1]
     stalled = False
     while not stalled:
         solved_values_before = len([box for box in values.keys() if len(values[box])==1])
@@ -124,6 +152,8 @@ def reduce_puzzle(values):
 
 
 def search(values):
+    "Using depth-first search and propagation, try all possible values."
+    # First, reduce the puzzle using the previous function
     values = reduce_puzzle(values)
     if values is False:
         return False
@@ -132,7 +162,8 @@ def search(values):
     n,s = min((len(values[s]), s) for s in boxes if len(values[s]) > 1)
     for value in values[s]:
         new_sudoku = values.copy()
-        new_sudoku = assign_value(new_sudoku, s, value)
+        #new_sudoku = assign_value(new_sudoku, s, value)
+        assign_value(new_sudoku, s, value)
         attempt = search(new_sudoku)
         if attempt:
             return attempt
@@ -150,8 +181,14 @@ def solve(grid):
     return search(values)
 
 if __name__ == '__main__':
+
     diag_sudoku_grid = '2.............62....1....7...6..8...3...9...7...6..4...4....8....52.............3'
-    display(solve(diag_sudoku_grid))
+    grid1 = '9.1....8.8.5.7..4.2.4....6...7......5..............83.3..6......9................'
+    solution = solve(grid1)
+    if solution:
+        display(solution)
+    else:
+        print('Could not solve')
 
     try:
         from visualize import visualize_assignments

@@ -3,20 +3,15 @@
 
 # Question 1 (Naked Twins)
 Q: How do we use constraint propagation to solve the naked twins problem?  
-A: This strategy is implemented in function `naked_twins`
-1. for `unit` in `all_units`:
-   1. filter the boxes in a unit which meet the condition of naked twins.
-   2. go over all other boxes in unit and remove the two possible assignments from their list of possible values in those boxes
-   3. return the modified sudoku grid
-2. In function `reduce_puzzle`, we used to call two reduction strategies, a) `eliminate` to find a box with assigned value(i.e. box having only one possible choice.
-b) `only_choice` to assign a value to a box in a unit if that value is a possible value in only one box in that unit.
- 
-   Now we also call `naked_twins` in this code block as a 3rd reduction strategy.
+A: Just like `eliminate` and `only_choice` strategies, we use `naked_twins` strategy in addition  
+in `reduce_puzzle` to narrow down the possible variable assignments to boxes. This reduces the search 
+space that DFS needs to traverse. This strategy is implemented in function `naked_twins` and is well documented in code. 
         
 
 # Question 2 (Diagonal Sudoku)
 Q: How do we use constraint propagation to solve the diagonal sudoku problem?  
-A: I added the two diagonal units to the list of units which enables the constraint checking when we go over the units in `eliminate` and `naked_twins`. The Diagonal units were built using code like:
+A: One easy way is to added the two diagonal units to the list of units. This automatically enables the constraint 
+checking when we go over the units in `eliminate` and `naked_twins`. The diagonal units were built using code like:
 ```
 diagonal_1 = [[r+c for r,c in zip(rows,cols)]]
 diagonal_2 = [[r+c for r,c in zip(reversed(rows),cols)]]
